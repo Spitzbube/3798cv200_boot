@@ -1821,10 +1821,10 @@ static void select_root_app_args(struct partition_update_info *root_part,
 		appfs_mtd = 10;
 	}
 
-	sprintf(bootargs_cmd, "mem=1G mmz=ddr,0,0,380M console=ttyAMA0,115200 "
+	sprintf(bootargs_cmd, "mem=1G mmz=ddr,0,0,48M console=ttyAMA0,115200 "
 		"root=/dev/mtdblock%d rootfstype=yaffs2 app=/dev/mtdblock%d conf=/dev/mtdblock5 "
 		"mtdparts=hinand:1M(boot),1M(bootargs),1M(baseparam),1M(logo),1M(deviceinfo),20M(confparam),1M(loaderdb),8M(loader),"
-		"8M(kernel),96M(rootfs),64M(appfs),8M(kernelbak),96M(rootfsbak),64M(appfsbak),-(others)",
+		"8M(kernel),96M(rootfs),64M(appfs),8M(kernelbak),96M(rootfsbak),64M(appfsbak),-(others) vmalloc=500M",
 		rootfs_mtd, appfs_mtd);
 	setenv("bootargs", bootargs_cmd);
 }
@@ -1835,12 +1835,11 @@ int select_boot_partition(void)
 	struct boot_info boot_partition;
 
 	mdelay(100);
-	printf("struct boot_info offset is %d\n", offset);
 
 	if (read_eeprom_data(offset, sizeof(struct boot_info), (unsigned char *)&boot_partition) != 0)
 		return -1;
 
-#if 1	
+#if 0	
 	printf("kernel partition: flag %u, which %u, state %u.\n",
 		boot_partition.kernel.update_flag, boot_partition.kernel.which_partition, boot_partition.kernel.partition_update_state);
 	printf("rootfs partition: flag %u, which %u, state %u.\n",
