@@ -1761,10 +1761,10 @@ static unsigned int get_swap_rootfs_partition(struct partition_update_info *root
 static unsigned int get_appfs_partition(struct partition_update_info *app_part)
 {
 	if (app_part->which_partition == PARTITION_BACKUP) {
-		printf("rootfs boot from mtd13\n");
+		printf("appfs boot from mtd13\n");
 		return 13;
 	} else {
-		printf("rootfs boot from mtd10\n");
+		printf("appfs boot from mtd10\n");
 		return 10;
 	}
 }
@@ -1772,13 +1772,31 @@ static unsigned int get_appfs_partition(struct partition_update_info *app_part)
 static unsigned int get_swap_appfs_partition(struct partition_update_info *app_part)
 {
 	if (app_part->which_partition == PARTITION_BACKUP) {
-		printf("rootfs boot from mtd10\n");
+		printf("appfs boot from mtd10\n");
 		app_part->which_partition = PARTITION_PRIMARY;
 		return 10;
 	} else {
-		printf("rootfs boot from mtd13\n");
+		printf("appfs boot from mtd13\n");
 		app_part->which_partition = PARTITION_BACKUP;
 		return 13;
+	}
+}
+
+static int get_console_cfg(char *args)
+{
+	char *start, *end;
+	char *cmdline = getenv("bootargs");
+
+	if (cmdline) {
+		if ((start = strstr (cmdline, "console=")) != NULL) {
+			end = strchr (start, ' ');
+			strncpy(args, start, (end  - start));
+			return 0;
+		} else {
+			return 1;
+		}
+	} else {
+		return 1;
 	}
 }
 
@@ -1788,6 +1806,7 @@ static void select_root_app_args(struct partition_update_info *root_part,
 	char bootargs_cmd[512] = {0};
 	unsigned int rootfs_mtd;
 	unsigned int appfs_mtd;
+	char console[32] = {0};
 
 	if (root_part->update_flag == BOOT_UPDATE) {
 		root_part->update_flag = BOOT_NORMAL;
@@ -1814,18 +1833,24 @@ static void select_root_app_args(struct partition_update_info *root_part,
 		else
 			appfs_mtd = get_appfs_partition(app_part);
 	} else {
-		printf("boot rootfs from mtd10\n");
+		printf("boot appfs from mtd10\n");
 		app_part->update_flag = BOOT_NORMAL;
 		app_part->which_partition = PARTITION_PRIMARY;
 		app_part->partition_update_state = UPDATE_FINISH;
 		appfs_mtd = 10;
 	}
 
-	sprintf(bootargs_cmd, "mem=1G mmz=ddr,0,0,48M console=ttyAMA0,115200 "
+	if (get_console_cfg(console) != 0) {
+		sprintf(console, " ");
+	} else {
+		printf("current console: %s\n", console);
+	}
+
+	sprintf(bootargs_cmd, "mem=1G mmz=ddr,0,0,48M %s "
 		"root=/dev/mtdblock%d rootfstype=yaffs2 app=/dev/mtdblock%d conf=/dev/mtdblock5 "
 		"mtdparts=hinand:1M(boot),1M(bootargs),1M(baseparam),1M(logo),1M(deviceinfo),20M(confparam),1M(loaderdb),8M(loader),"
 		"8M(kernel),96M(rootfs),64M(appfs),8M(kernelbak),96M(rootfsbak),64M(appfsbak),-(others) vmalloc=500M",
-		rootfs_mtd, appfs_mtd);
+		console, rootfs_mtd, appfs_mtd);
 	setenv("bootargs", bootargs_cmd);
 }
 
